@@ -18,6 +18,8 @@ jobs:
     env:
       CI: "1"
       EXPO_PUBLIC_BACKEND_URL: "https://inovapro-api-runtime-production.up.railway.app"
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout
@@ -26,26 +28,31 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"             "platform-tools"             "platforms;android-36"             "build-tools;36.0.0"             "ndk;27.1.12297006"             "cmake;3.22.1"
 
       - name: Restore mobile source
+        shell: bash
         run: |
+          set -euo pipefail
           base64 -d mobile_bundle.b64 > /tmp/inovapro-mobile.zip
           mkdir -p "$GITHUB_WORKSPACE/mobile-src"
           unzip -q /tmp/inovapro-mobile.zip -d "$GITHUB_WORKSPACE/mobile-src"
           test -f "$GITHUB_WORKSPACE/mobile-src/inovapro/frontend/package.json"
-
-      - name: Install Yarn
-        run: npm install --global yarn@1.22.22
 
       - name: Install dependencies
         working-directory: mobile-src/inovapro/frontend
@@ -61,15 +68,26 @@ jobs:
 
       - name: Build debug APK
         working-directory: mobile-src/inovapro/frontend/android
+        shell: bash
         run: |
+          set -euo pipefail
+          cat >> gradle.properties <<'EOF'
+
+          org.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8
+          org.gradle.workers.max=2
+          org.gradle.parallel=false
+          EOF
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --max-workers=2 -PreactNativeArchitectures=arm64-v8a --stacktrace
 
       - name: Verify APK
+        shell: bash
         run: |
+          set -euo pipefail
           APK="$GITHUB_WORKSPACE/mobile-src/inovapro/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           ls -lh "$APK"
+          sha256sum "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
