@@ -67,8 +67,19 @@ npx expo prebuild --platform android --clean
 
 echo "== Android debug APK build =="
 cd "$FRONTEND/android"
+
+# InovaPro CI memory profile for the 1 GB Railway container.
+cat >> gradle.properties <<'EOF'
+
+org.gradle.jvmargs=-Xmx512m -XX:MaxMetaspaceSize=256m -Dfile.encoding=UTF-8
+org.gradle.workers.max=1
+org.gradle.parallel=false
+kotlin.daemon.jvm.options=-Xmx256m
+EOF
+
+export GRADLE_OPTS="-Dorg.gradle.workers.max=1 -Dorg.gradle.parallel=false"
 chmod +x gradlew
-./gradlew assembleDebug --no-daemon --stacktrace
+./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace
 
 APK="$FRONTEND/android/app/build/outputs/apk/debug/app-debug.apk"
 test -s "$APK"
