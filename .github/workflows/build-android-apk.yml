@@ -1,0 +1,80 @@
+name: Build InovaPro Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - mobile_bundle.b64
+      - .github/workflows/build-android-apk.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: "1"
+      EXPO_PUBLIC_BACKEND_URL: "https://inovapro-api-runtime-production.up.railway.app"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Restore mobile source
+        run: |
+          base64 -d mobile_bundle.b64 > /tmp/inovapro-mobile.zip
+          mkdir -p "$GITHUB_WORKSPACE/mobile-src"
+          unzip -q /tmp/inovapro-mobile.zip -d "$GITHUB_WORKSPACE/mobile-src"
+          test -f "$GITHUB_WORKSPACE/mobile-src/inovapro/frontend/package.json"
+
+      - name: Install Yarn
+        run: npm install --global yarn@1.22.22
+
+      - name: Install dependencies
+        working-directory: mobile-src/inovapro/frontend
+        run: yarn install --frozen-lockfile --ignore-engines
+
+      - name: Validate unit tests
+        working-directory: mobile-src/inovapro/frontend
+        run: yarn test:unit
+
+      - name: Generate Android native project
+        working-directory: mobile-src/inovapro/frontend
+        run: npx expo prebuild --platform android --clean
+
+      - name: Build debug APK
+        working-directory: mobile-src/inovapro/frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Verify APK
+        run: |
+          APK="$GITHUB_WORKSPACE/mobile-src/inovapro/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          ls -lh "$APK"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: InovaPro-Android-APK
+          path: mobile-src/inovapro/frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
