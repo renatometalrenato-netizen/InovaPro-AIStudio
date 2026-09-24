@@ -27,7 +27,7 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     archive.extractall(TARGET)
 
 try:
-    provider_code = github_text("railway/text_provider_gemini.py", "b03d1f6550557f23569d07e3099325995e0e039a")
+    provider_code = github_text("railway/text_provider_gemini.py", "deploy/mobile-v2-backend")
     provider_path = os.path.join(TARGET, "app", "providers", "text.py")
     os.makedirs(os.path.dirname(provider_path), exist_ok=True)
     with open(provider_path, "w", encoding="utf-8") as fh:
