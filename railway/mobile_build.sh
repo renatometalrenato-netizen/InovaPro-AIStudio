@@ -25,6 +25,65 @@ curl -fsSL "https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro
 unzip -oq "$WORK/mobile-v2-patch.zip" -d "$FRONTEND"
 test -f "$FRONTEND/app/diagnostico360.tsx"
 
+echo "== Applying InovaPro Mobile v3 social-login overlay =="
+FRONTEND="$FRONTEND" python - <<'PY'
+import base64
+import json
+import os
+import pathlib
+import urllib.parse
+import urllib.request
+
+repo = "renatometalrenato-netizen/InovaPro-AIStudio"
+ref = "deploy/mobile-v3-social-auth"
+frontend = pathlib.Path(os.environ["FRONTEND"])
+files = {
+    "railway/mobile_overlay/frontend/src/auth-context.tsx": "src/auth-context.tsx",
+    "railway/mobile_overlay/frontend/app/(auth)/login.tsx": "app/(auth)/login.tsx",
+    "railway/mobile_overlay/frontend/app/oauth/callback.tsx": "app/oauth/callback.tsx",
+}
+for remote, local in files.items():
+    url = (
+        "https://api.github.com/repos/" + repo + "/contents/" +
+        urllib.parse.quote(remote, safe="/") +
+        "?ref=" + urllib.parse.quote(ref, safe="")
+    )
+    req = urllib.request.Request(
+        url,
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "InovaPro-APK-Builder"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    data = base64.b64decode(payload["content"])
+    target = frontend / local
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    print("v3 mobile overlay:", local, flush=True)
+
+diag = frontend / "app/diagnostico360.tsx"
+text = diag.read_text(encoding="utf-8")
+text = text.replace(
+    "  answer_options: AnswerOption[];\n};",
+    "  answer_options: AnswerOption[];\n  connected_sources?: Array<{ provider: string; display_name?: string | null; connected: boolean }>;\n  note?: string;\n};",
+)
+text = text.replace(
+    'queryFn: () => api<DiagnosticDefinition>("/diagnostics/360/questions"),',
+    'queryFn: () => api<DiagnosticDefinition>("/diagnostics/360/smart/questions"),',
+)
+text = text.replace(
+    'mutationFn: () => api<DiagnosticResult>("/diagnostics/360/submit", { method: "POST", body: { answers } }),',
+    'mutationFn: () => api<DiagnosticResult>("/diagnostics/360/smart/submit", { method: "POST", body: { answers } }),',
+)
+text = text.replace(
+    "São 21 perguntas objetivas divididas em 7 pilares. A pontuação é calculada por regras fixas — sem IA inventando nota.",
+    "A InovaPro usa os dados que você conectou como contexto e pergunta apenas 7 pontos internos que Google e Instagram não conseguem enxergar com segurança. A pontuação continua sendo calculada por regras fixas — sem IA inventando nota.",
+)
+text = text.replace('<InfoBox value="21" label="perguntas" />', '<InfoBox value="7" label="perguntas essenciais" />')
+text = text.replace('<InfoBox value="~5 min" label="para concluir" />', '<InfoBox value="~2 min" label="para concluir" />')
+diag.write_text(text, encoding="utf-8")
+print("v3 smart diagnostic endpoints patched", flush=True)
+PY
+
 cd "$FRONTEND"
 
 export CI=1
