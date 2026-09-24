@@ -82,6 +82,19 @@ text = text.replace('<InfoBox value="21" label="perguntas" />', '<InfoBox value=
 text = text.replace('<InfoBox value="~5 min" label="para concluir" />', '<InfoBox value="~2 min" label="para concluir" />')
 diag.write_text(text, encoding="utf-8")
 print("v3 smart diagnostic endpoints patched", flush=True)
+
+api_file = frontend / "src/api.ts"
+api_text = api_file.read_text(encoding="utf-8")
+api_text = api_text.replace(
+    "  onActionPending?: (action: NovaPendingAction) => void;\n",
+    "  onActionPending?: (action: NovaPendingAction) => void;\n  onHandoff?: (handoff: { id: string; message: string }) => void;\n",
+)
+api_text = api_text.replace(
+    '        else if (event.type === "action_pending") handlers.onActionPending?.(event.action);\n',
+    '        else if (event.type === "action_pending") handlers.onActionPending?.(event.action);\n        else if (event.type === "handoff_ready") handlers.onHandoff?.(event.handoff);\n',
+)
+api_file.write_text(api_text, encoding="utf-8")
+print("v3 Nova handoff contract patched", flush=True)
 PY
 
 cd "$FRONTEND"
@@ -95,10 +108,6 @@ fi
 
 echo "== Installing dependencies =="
 yarn install --frozen-lockfile --ignore-engines
-
-echo "== Inspecting current Nova handoff contract =="
-sed -n '55,105p' tests/api.test.cjs || true
-grep -n -A80 -B10 "NovaStreamHandlers" src/api.ts || true
 
 echo "== Running unit tests =="
 yarn test:unit
