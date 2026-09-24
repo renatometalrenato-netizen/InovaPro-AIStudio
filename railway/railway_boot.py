@@ -25,6 +25,17 @@ os.makedirs(TARGET, exist_ok=True)
 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     archive.extractall(TARGET)
 
+provider_url = f"{BASE}/text_provider_gemini.py"
+provider_path = os.path.join(TARGET, "app", "providers", "text.py")
+try:
+    provider_code = urllib.request.urlopen(provider_url, timeout=30).read()
+    os.makedirs(os.path.dirname(provider_path), exist_ok=True)
+    with open(provider_path, "wb") as fh:
+        fh.write(provider_code)
+    print("Gemini provider override loaded", flush=True)
+except Exception as exc:
+    print(f"Provider override unavailable: {exc}", file=sys.stderr)
+
 subprocess.check_call([
     sys.executable, "-m", "pip", "install", "--no-cache-dir",
     "-r", os.path.join(TARGET, "requirements-runtime.txt")
