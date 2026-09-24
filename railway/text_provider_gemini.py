@@ -81,7 +81,7 @@ class GeminiProvider:
         payload = {
             "systemInstruction": {"parts": [{"text": system_message}]},
             "contents": [{"role": "user", "parts": [{"text": user_text}]}],
-            "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048},
+            "generationConfig": {"maxOutputTokens": 2048},
         }
         headers = {
             "Content-Type": "application/json",
