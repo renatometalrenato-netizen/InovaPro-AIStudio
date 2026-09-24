@@ -26,7 +26,7 @@ unzip -oq "$WORK/mobile-v2-patch.zip" -d "$FRONTEND"
 test -f "$FRONTEND/app/diagnostico360.tsx"
 
 echo "== Applying InovaPro Mobile v3 social-login overlay =="
-FRONTEND="$FRONTEND" python - <<'PY'
+FRONTEND="$FRONTEND" python3 - <<'PY'
 import base64
 import json
 import os
