@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import io
 import os
 import subprocess
@@ -9,10 +10,19 @@ import zipfile
 BASE = "https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro-AIStudio/deploy/mobile-v2-backend/railway"
 TARGET = "/tmp/inovapro"
 
-payload = urllib.request.urlopen(f"{BASE}/backend_bundle.b64", timeout=30).read().decode("utf-8")
-data = base64.b64decode(payload)
+parts = [os.environ.get("BACKEND_BUNDLE_B64_1", ""), os.environ.get("BACKEND_BUNDLE_B64_2", ""), os.environ.get("BACKEND_BUNDLE_B64_3", "")]
+if all(parts):
+    payload = "".join(parts)
+    expected = os.environ.get("BACKEND_BUNDLE_SHA256", "").strip()
+    raw = base64.b64decode(payload)
+    if expected and hashlib.sha256(raw).hexdigest() != expected:
+        raise RuntimeError("Backend bundle checksum mismatch")
+else:
+    payload = urllib.request.urlopen(f"{BASE}/backend_bundle.b64", timeout=30).read().decode("utf-8")
+    raw = base64.b64decode(payload)
+
 os.makedirs(TARGET, exist_ok=True)
-with zipfile.ZipFile(io.BytesIO(data)) as archive:
+with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     archive.extractall(TARGET)
 
 subprocess.check_call([
