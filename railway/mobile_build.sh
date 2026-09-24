@@ -19,6 +19,12 @@ unzip -q "$WORK/inovapro-mobile.zip" -d "$WORK/src"
 
 FRONTEND="$WORK/src/inovapro/frontend"
 test -f "$FRONTEND/package.json"
+
+echo "== Applying InovaPro Mobile v2 patch =="
+curl -fsSL "https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro-AIStudio/deploy/mobile-v2-backend/railway/mobile_v2_patch.b64" | base64 -d > "$WORK/mobile-v2-patch.zip"
+unzip -oq "$WORK/mobile-v2-patch.zip" -d "$FRONTEND"
+test -f "$FRONTEND/app/diagnostico360.tsx"
+
 cd "$FRONTEND"
 
 export CI=1
