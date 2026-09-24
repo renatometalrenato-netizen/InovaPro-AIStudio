@@ -8,7 +8,9 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-print("BOOT_V3_SOCIAL_AUTH", flush=True)\n\nTARGET = "/tmp/inovapro"
+print("BOOT_V3_SOCIAL_AUTH", flush=True)
+
+TARGET = "/tmp/inovapro"
 REPO = "renatometalrenato-netizen/InovaPro-AIStudio"
 V3_REF = "deploy/mobile-v3-social-auth"
 
