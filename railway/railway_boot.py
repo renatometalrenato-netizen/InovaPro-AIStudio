@@ -6,7 +6,7 @@ import sys
 import urllib.request
 import zipfile
 
-BASE = "https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro-AIStudio/main/railway"
+BASE = "https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro-AIStudio/deploy/mobile-v2-backend/railway"
 TARGET = "/tmp/inovapro"
 
 payload = urllib.request.urlopen(f"{BASE}/backend_bundle.b64", timeout=30).read().decode("utf-8")
