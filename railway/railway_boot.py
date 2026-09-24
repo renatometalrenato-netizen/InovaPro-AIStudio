@@ -45,7 +45,7 @@ overlay = {
     "railway/overlay/server.py": "server.py",
     "railway/overlay/requirements-runtime.txt": "requirements-runtime.txt",
     "railway/overlay/app/routers/__init__.py": "app/routers/__init__.py",
-    "railway/overlay/app/routers/social_auth_router.py": "app/routers/social_auth_router.py",
+    "railway/overlay/app/routers/social_auth_router.py": "app/routers/social_auth_router.py",\n    "railway/overlay/app/routers/nova_router.py": "app/routers/nova_router.py",
 }
 for remote, local in overlay.items():
     data = github_text(remote, V3_REF)
