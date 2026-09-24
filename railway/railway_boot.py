@@ -1,27 +1,36 @@
 import base64
 import io
+import json
 import os
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 import zipfile
 
-BASE = "https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro-AIStudio/50611b5d9460786b5002c35b726e7efee9fb92cf/railway"
 TARGET = "/tmp/inovapro"
 
-payload = urllib.request.urlopen(f"{BASE}/backend_bundle.b64", timeout=30).read().decode("utf-8")
-raw = base64.b64decode(payload)
+def github_text(path: str, ref: str) -> str:
+    encoded_path = urllib.parse.quote(path, safe="/")
+    encoded_ref = urllib.parse.quote(ref, safe="")
+    url = f"https://api.github.com/repos/renatometalrenato-netizen/InovaPro-AIStudio/contents/{encoded_path}?ref={encoded_ref}"
+    req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "InovaPro-Railway"})
+    with urllib.request.urlopen(req, timeout=30) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return base64.b64decode(payload["content"]).decode("utf-8")
+
+bundle_text = github_text("railway/backend_bundle.b64", "main")
+raw = base64.b64decode(bundle_text)
 
 os.makedirs(TARGET, exist_ok=True)
 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     archive.extractall(TARGET)
 
-provider_url = f"{BASE}/text_provider_gemini.py"
-provider_path = os.path.join(TARGET, "app", "providers", "text.py")
 try:
-    provider_code = urllib.request.urlopen(provider_url, timeout=30).read()
+    provider_code = github_text("railway/text_provider_gemini.py", "b03d1f6550557f23569d07e3099325995e0e039a")
+    provider_path = os.path.join(TARGET, "app", "providers", "text.py")
     os.makedirs(os.path.dirname(provider_path), exist_ok=True)
-    with open(provider_path, "wb") as fh:
+    with open(provider_path, "w", encoding="utf-8") as fh:
         fh.write(provider_code)
     print("Gemini provider override loaded", flush=True)
 except Exception as exc:
