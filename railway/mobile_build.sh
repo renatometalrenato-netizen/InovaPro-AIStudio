@@ -96,6 +96,10 @@ fi
 echo "== Installing dependencies =="
 yarn install --frozen-lockfile --ignore-engines
 
+echo "== Inspecting current Nova handoff contract =="
+sed -n '55,105p' tests/api.test.cjs || true
+grep -n -A80 -B10 "NovaStreamHandlers" src/api.ts || true
+
 echo "== Running unit tests =="
 yarn test:unit
 
