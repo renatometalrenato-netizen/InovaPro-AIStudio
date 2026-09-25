@@ -18,6 +18,8 @@ def fetch_text(url: str) -> str:
     with urllib.request.urlopen(req, timeout=30) as response:
         return response.read().decode("utf-8").strip()
 
+print("BOOT_V7_AUTO_SYNC", flush=True)
+
 payload = "".join(fetch_text(f"{BASE}/backend.part{i}") for i in range(1, PART_COUNT + 1))
 raw = base64.b64decode(payload, validate=True)
 actual_sha = hashlib.sha256(raw).hexdigest()
@@ -28,6 +30,13 @@ os.makedirs(TARGET, exist_ok=True)
 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     archive.testzip()
     archive.extractall(TARGET)
+
+# Small safe overlay so the packaged router namespace exports every v7 router.
+routers_init = fetch_text(f"{BASE}/routers_init.py")
+routers_init_path = os.path.join(TARGET, "app", "routers", "__init__.py")
+with open(routers_init_path, "w", encoding="utf-8") as fh:
+    fh.write(routers_init + "\n")
+print("V7 routers overlay loaded", flush=True)
 
 # Compatibility bridge: production historically stores the Gemini secret as
 # GEMINI_API_KEY, while this backend adapter reads GOOGLE_API_KEY.
