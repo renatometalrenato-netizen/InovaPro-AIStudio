@@ -1,0 +1,79 @@
+name: Package InovaPro Current Source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/package-current-source.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct mobile source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package/mobile
+          base64 -d mobile_bundle.b64 > /tmp/inovapro-mobile.zip
+          unzip -q /tmp/inovapro-mobile.zip -d package/mobile
+
+      - name: Reconstruct backend v7
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package/backend-v7
+          cat railway/v7/backend.part1 railway/v7/backend.part2 railway/v7/backend.part3 railway/v7/backend.part4 railway/v7/backend.part5 railway/v7/backend.part6 > /tmp/backend-v7.b64
+          tr -d '\\r\\n' < /tmp/backend-v7.b64 > /tmp/backend-v7-clean.b64
+          base64 -d /tmp/backend-v7-clean.b64 > /tmp/backend-v7.zip
+          echo "7ac2e58222d139b018343821d68693aade066ffa49d1c669d8000cb4dcfe8786  /tmp/backend-v7.zip" | sha256sum -c -
+          unzip -q /tmp/backend-v7.zip -d package/backend-v7
+          cp railway/v7/routers_init.py package/backend-v7/app/routers/__init__.py
+
+      - name: Add operational files and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package/operations
+          cp -R .github package/operations/
+          cp -R railway package/operations/
+          cp README.md package/operations/README_GITHUB.md
+          {
+            echo "INOVAPRO SYSTEMS — CURRENT SOURCE PACKAGE"
+            echo "Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "Repository: renatometalrenato-netizen/InovaPro-AIStudio"
+            echo "Commit: $(git rev-parse HEAD)"
+            echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+            echo
+            echo "mobile/ = decoded current mobile source from mobile_bundle.b64"
+            echo "backend-v7/ = decoded production backend v7"
+            echo "operations/ = GitHub Actions + Railway boot/deploy helpers"
+            echo
+            echo "No environment secret values are included."
+          } > package/MANIFEST.txt
+
+      - name: Package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -qr InovaPro-Current-Source.zip package
+          sha256sum InovaPro-Current-Source.zip > InovaPro-Current-Source.sha256
+          ls -lh InovaPro-Current-Source.zip
+
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: InovaPro-Current-Source
+          path: |
+            InovaPro-Current-Source.zip
+            InovaPro-Current-Source.sha256
+          if-no-files-found: error
+          retention-days: 14
