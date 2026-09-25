@@ -8,7 +8,7 @@ import urllib.request
 import zipfile
 
 TARGET = "/tmp/inovapro"
-REF = "deploy/mobile-v7-auto-sync"
+REF = "main"
 BASE = f"https://raw.githubusercontent.com/renatometalrenato-netizen/InovaPro-AIStudio/{REF}/railway/v7"
 EXPECTED_ZIP_SHA256 = "7ac2e58222d139b018343821d68693aade066ffa49d1c669d8000cb4dcfe8786"
 PART_COUNT = 6
